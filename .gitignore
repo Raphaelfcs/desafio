@@ -1,3 +1,4 @@
 .terraform/
 plan
 .terraform.lock.hcl
+python_scripts/__pycache__/
