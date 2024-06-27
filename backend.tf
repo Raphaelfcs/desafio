@@ -8,4 +8,3 @@ terraform {
     region  = "INFORME-SUA-REGIAO"
   }
 }
-

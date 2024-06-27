@@ -35,7 +35,7 @@ create-iac.sh
 Após a criação dos recursos, será informada a URL do API Gateway:
 
 ```
-https://LINK-DO-API-GTW/prod/proxy
+"https://LINK-DO-API-GTW/prod"/proxy" 
 ```
 
 Para chamar a API, edite o arquivo removendo a penúltima `" na frente do `proxy` e rode o comando:
