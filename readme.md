@@ -19,6 +19,9 @@ Para provisionar a infraestrutura de acordo com o desenho, preencha o `backend.t
 - **Lambda**: Inclui um S3 que será criado em tempo de execução para armazenar o código Python e a própria Lambda privada em uma subnet com grupo de segurança.
 - **API Gateway**: Contém chamadas de API públicas, chamando a Lambda privada.
 
+
+![Diagrama da Arquitetura](Desafio.jpg)
+
 ## Executando o Código
 
 Para criar sua infraestrutura, configure seu backend, exporte suas credenciais ou configure suas credenciais da AWS. Após isso, execute o arquivo:
