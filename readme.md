@@ -48,6 +48,13 @@ curl -X POST "https://LINK-DO-API-GTW/prod/proxy"
 
 SUCESSO: rodou a lambda pelo api gtw sucesso
 
+
+![Monitoramento da lambda](lambda-log.png)
+
+
+![Chamada loop da lambda](loop-lambda.png)
+
+
 # Informações de Código
 
 ## Terraform
