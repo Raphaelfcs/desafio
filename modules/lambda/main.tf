@@ -1,6 +1,22 @@
-resource "aws_iam_role" "lambda_exec" {
-  name = "lambda_exec_role"
+resource "aws_s3_bucket" "lambda_bucket" {
+  bucket = var.s3_bucket_name
 
+  tags = {
+    Name = var.s3_bucket_name
+  }
+}
+
+resource "aws_s3_object" "lambda_code" {
+  bucket = aws_s3_bucket.lambda_bucket.id
+  key    = var.s3_object_key
+  source = var.lambda_code_path
+
+  depends_on = [aws_s3_bucket.lambda_bucket]
+}
+
+resource "aws_iam_role" "lambda_execution_role" {
+  name = "lambda_execution_role"
+  
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
@@ -15,9 +31,9 @@ resource "aws_iam_role" "lambda_exec" {
   })
 }
 
-resource "aws_iam_policy" "lambda_vpc_access_policy" {
-  name        = "lambda_vpc_access_policy"
-  description = "IAM policy for Lambda to access VPC"
+resource "aws_iam_role_policy" "lambda_vpc_policy" {
+  name = "lambda_vpc_policy"
+  role = aws_iam_role.lambda_execution_role.id
   
   policy = jsonencode({
     Version = "2012-10-17"
@@ -30,63 +46,49 @@ resource "aws_iam_policy" "lambda_vpc_access_policy" {
           "ec2:DeleteNetworkInterface"
         ]
         Resource = "*"
-      }
+      },
     ]
   })
 }
 
-resource "aws_iam_policy_attachment" "lambda_exec_policy" {
-  name       = "lambda_exec_policy_attachment"
-  roles      = [aws_iam_role.lambda_exec.name]
+resource "aws_iam_role_policy_attachment" "lambda_policy" {
+  role       = aws_iam_role.lambda_execution_role.name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
 
-resource "aws_iam_policy_attachment" "lambda_vpc_access_policy_attachment" {
-  name       = "lambda_vpc_access_policy_attachment"
-  roles      = [aws_iam_role.lambda_exec.name]
-  policy_arn = aws_iam_policy.lambda_vpc_access_policy.arn
-}
-
-resource "random_pet" "bucket_name" {
-  length    = 2
-  separator = "-"
-}
-
-resource "aws_s3_bucket" "lambda_code_bucket" {
-  bucket = "lambda-code-bucket-${random_pet.bucket_name.id}"
-}
-
-resource "aws_s3_object" "lambda_zip" {
-  bucket = aws_s3_bucket.lambda_code_bucket.bucket
-  key    = "lambda_function.zip"
-  source = var.lambda_code_path
-}
-
-resource "aws_lambda_function" "lambda" {
-  function_name = "private_lambda_function"
-  role          = aws_iam_role.lambda_exec.arn
-  handler       = "index.handler"
-  runtime       = "python3.8"
-  s3_bucket     = aws_s3_bucket.lambda_code_bucket.bucket
-  s3_key        = aws_s3_object.lambda_zip.key
-
+resource "aws_lambda_function" "private_lambda" {
+  filename         = var.lambda_code_path
+  function_name    = var.lambda_function_name
+  role             = aws_iam_role.lambda_execution_role.arn
+  handler          = "lambda_function.lambda_handler"
+  runtime          = "python3.8"
   vpc_config {
-    subnet_ids         = var.private_subnet_ids
-    security_group_ids = [var.lambda_security_group_id]
+    subnet_ids         = [var.subnet_id]
+    security_group_ids = [aws_security_group.lambda_sg.id]#[var.security_group_id]
   }
 
-  environment {
-    variables = {
-      SUCCESS_MESSAGE = "Success: Lambda executed successfully!"
-      FAILURE_MESSAGE = "Failure: Lambda execution failed!"
-    }
-  }
+  depends_on = [aws_s3_object.lambda_code, aws_security_group.lambda_sg]
 }
 
-resource "aws_lambda_permission" "apigw" {
-  statement_id  = "AllowAPIGatewayInvoke"
-  action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.lambda.function_name
-  principal     = "apigateway.amazonaws.com"
-  source_arn    = "arn:aws:execute-api:${var.region}:${var.account_id}:${var.api_gateway_rest_api_id}/*/*/{proxy+}"
+
+resource "aws_security_group" "lambda_sg" {
+  name        = "lambda_security_group"
+  description = "Security group for Lambda function"
+  vpc_id      = var.vpc_id
+
+  ingress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = var.resource_tags
 }

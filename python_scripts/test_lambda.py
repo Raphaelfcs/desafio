@@ -1,5 +1,5 @@
 import json
-from index import handler
+from desafio.python_scripts.lambda_function import handler
 
 # Simular dados de evento
 event = {
